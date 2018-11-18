@@ -17,7 +17,7 @@ def means_comparison(N = 1000):
         # res = sp.statistical_modules.ttest_ind(a, b, equal_var=False, )
         var_1 = a.var(ddof=1)
         var_2 = b.var(ddof=1)
-        se = np.sqrt( var_1/n1 + var_2/n2 )
+        se = np.sqrt(var_1/n1 + var_2/n2)
         df = (var_1/n1 + var_2/n2)**2 / (( (var_1 / n1)**2/(n1 - 1)) + ((var_2 / n2)**2 / (n2 - 1)))
         t = (a.mean() - b.mean() - hypo_diff) / se
         p = 1 - stats.t.cdf(t, df=df)
@@ -34,6 +34,10 @@ def proportions_comparison(p1, n1, p2, n2, delta, alpha):
 
     p_hat = (round(p1 * n1) + round(p2 * n2)) / (n1 + n2)
     se = np.sqrt(p_hat * (1 - p_hat) * (1 / n1 + 1 / n2))
+    if se == 0: ## TODO: double check if correctly handling the case of zero SE
+        return False
+    if __VERBOSE__:
+        print ('p1, p2, abs(p1 - p2), delta, se:', p1, p2, abs(p1 - p2), delta, se)
     z_hat = (abs(p1 - p2) - delta) / se
     p = 1 - stats.norm.cdf(z_hat)
     if p < alpha:
