@@ -30,19 +30,102 @@ def means_comparison(N = 1000):
     print ('success rate:', count_success / N)
 
 
-def proportions_comparison(p1, n1, p2, n2, delta, alpha):
+def perform_hypothesis_testing(m1, n1, m2, n2, delta, alpha):
 
-    p_hat = (round(p1 * n1) + round(p2 * n2)) / (n1 + n2)
-    se = np.sqrt(p_hat * (1 - p_hat) * (1 / n1 + 1 / n2))
-    if se == 0: ## TODO: double check if correctly handling the case of zero SE
-        return False
+    ## null hypothesis |p1 - p2| = 0
+    p1 = 0
+    if n1 != 0:
+        p1 = m1 / n1
+    p2 = 0
+    if n2 != 0:
+        p2 = m2 / n2
+    p_hat = (m1 + m2) / (n1 + n2)
+    v1 = 1 / n1 if n1 else 0
+    v2 = 1 / n2 if n2 else 0
+    se = np.sqrt(p_hat * (1 - p_hat) * (v1 + v2))
+    test_res = False
+    if se == 0:  ## TODO: double check if correctly handling the case of zero SE
+        params = {'m1': m1, 'n1': n1, 'm2': m2, 'n2': n2, 'p1': p1, 'p2': p2, 'diff': abs(p1 - p2),
+                  'p_hat': p_hat, 'se': se, 'z_hat': 'NA', 'pval': 'NA', 'delta': delta, 'alpha': alpha, 'significant_diff': test_res}
+
+        return (test_res, params)
     if __VERBOSE__:
-        print ('p1, p2, abs(p1 - p2), delta, se:', p1, p2, abs(p1 - p2), delta, se)
-    z_hat = (abs(p1 - p2) - delta) / se
-    p = 1 - stats.norm.cdf(z_hat)
-    if p < alpha:
-        return True
-    return False
+        print('p1, p2, abs(p1 - p2), delta, se:', p1, p2, abs(p1 - p2), delta, se)
+
+    min_val = min(p1, p2)
+    max_val = max(p1, p2)
+
+    # z_hat = (min_val - max_val - delta) / se
+    # z_hat2 = (max_val - min_val - delta) / se
+    # p_v1 = stats.norm.cdf(z_hat) + 1 - stats.norm.cdf(z_hat2)
+    actual_diff = max_val - min_val
+    z_hat = (max_val - min_val - delta) / se
+    p_v1 = 2 * (1 - stats.norm.cdf(z_hat))
+    test_res = (not (actual_diff < delta)) and p_v1 < alpha
+    params = {'m1': m1, 'n1': n1, 'm2': m2, 'n2': n2, 'p1': p1, 'p2': p2, 'diff': abs(p1 - p2),
+              'p_hat': p_hat, 'se': se, 'z_hat': z_hat, 'effect_size': (abs(p1 - p2) / se), 'pval': p_v1,
+              'delta': delta, 'alpha': alpha, 'significant_diff': test_res}
+    return (test_res, params)
+
+
+def perform_t_test(m1, n1, m2, n2, delta, alpha): ## null_hypo: μ1 - μ2 >= 7 https://stattrek.com/hypothesis-test/difference-in-means.aspx
+
+    import math
+    from scipy.stats import t
+
+    avg_1 = m1 / n1
+    avg_2 = m2 / n2
+    p_hat = (m1 + m2) / (n1 + n2)
+    test_res = False
+
+    if n1 <= 1 or n2 <= 1:
+        se = np.sqrt(p_hat * (1 - p_hat) * (1 / n1 + 1 / n2))
+        params = {'m1': m1, 'n1': n1, 'm2': m2, 'n2': n2, 'p1': avg_1, 'p2': avg_2, 'diff': abs(avg_1 - avg_2), 'deg_fr': -1,
+                  'p_hat': p_hat, 'se': se, 't_hat': 'NA', 'pval': 'NA', 'delta': delta, 'alpha': alpha, 'significant_diff': test_res}
+        return (test_res, params)
+
+    se_1 = math.sqrt((((1 - avg_1) ** 2) * m1) / (n1 - 1))
+    se_2 = math.sqrt((((1 - avg_2) ** 2) * m2) / (n2 - 1))
+
+    se_hat = ((se_1 ** 2 / n1) + (se_2 ** 2 / n2)) ** 0.5
+    # se_hat = (( ((n1 - 1) * (se_1 ** 2)) + ( (n2 - 1) * (se_2 ** 2)) ) / (n1 + n2 - 2)) ** 0.5
+    if se_1 == 0 and se_2 == 0: ## TODO: decide on the right value to return
+        params = {'m1': m1, 'n1': n1, 'm2': m2, 'n2': n2, 'p1': avg_1, 'p2': avg_2, 'diff': abs(avg_1 - avg_2), 'deg_fr': -1,
+                  'p_hat': p_hat, 'se': se_hat, 't_hat': 'NA', 'pval': 'NA', 'delta': delta, 'alpha': alpha, 'significant_diff': test_res}
+        return (test_res, params)
+
+    deg_fr =  se_hat ** 2 / ( ( ((se_1**2 / n1)**2) / (n1 - 1) ) + ( ((se_2**2 / n2)**2) / (n2 - 1) ))
+    deg_fr = round(deg_fr)
+    # deg_fr = n1 + n2 - 2
+    min_avg = min(avg_1, avg_2)
+    max_avg = max(avg_1, avg_1)
+    val = (max_avg - min_avg - delta) / (se_hat * (((1 / n1) + (1 / n2)) ** 0.5))
+    val2 = (min_avg - max_avg - delta) / (se_hat * (((1/n1)+(1/n2))**0.5))
+    try:
+        p_val1 = 1 - t.cdf(val, deg_fr)
+        p_val2 = t.cdf(val2, deg_fr)
+        p_val = p_val1 + p_val2
+    except RuntimeWarning:
+        print('overflow error')
+
+    test_res = p_val < alpha
+
+    params = {'m1': m1, 'n1': n1, 'm2': m2, 'n2': n2, 'p1': avg_1, 'p2': avg_2 , 'diff': abs(avg_1 - avg_2), 'deg_fr': deg_fr,
+              'p_hat': p_hat, 'se': se_hat, 't_hat': val, 'pval': p_val, 'delta': delta, 'alpha': alpha, 'significant_diff': test_res}
+
+    if p_val < alpha:
+        print(params)
+        print('\n')
+
+
+    return (test_res, params)
+
+
+def proportions_comparison(m1, n1, m2, n2, delta, alpha, hypothesis_testing=True):
+    if hypothesis_testing:
+        return perform_hypothesis_testing(m1, n1, m2, n2, delta, alpha)
+    else:
+        return perform_t_test(m1, n1, m2, n2, delta, alpha)
 
 def proportions_comparison_test(N = 1000):
 

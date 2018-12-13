@@ -1,0 +1,43 @@
+MAPPING AS THEY APPEAR IN THE BEAR PROJECT CODE
+
+"/annunci/cerca/$": "search",
+"/annunci/cerca/\\?": "search",
+"/annunci/affitto/\\?page=([0-9])+": "renting_page" + "page_" + number,
+"/annunci/vendita/\\?page=([0-9])+": "sales_page" + "page_" + number,
+"/annunci/vendita/\\?fb_xd_fragment": "sales_page" + "facebook",
+"/annunci/affitto(/)?$": "renting_page" + "page_1",
+"/annunci/vendita(/)?$": "sales_page" + "page_1",
+"/annunci/affitto/(\\w+)": "renting_anncs",
+"/annunci/vendita/(\\w+)": "sales_anncs",
+"^/$": "homepage",
+"^http://www.findyourhouse.it/$": "homepage",
+"/agenzia/: "agency",
+"/news/list/": "news_page",
+"/news/(\\d+)/": "news_article",
+"/contattaci/info/success/": "contacts_requested",
+"/contattaci/privacy/":  "tou",
+"/contattaci/ajax/info/$": "contact_requested",
+
+MORE COMPLEX PATTERNS:
+"/admin/": if "POST" if contains(" 302 ")) => "login_success" else "login_fail" else "admin";
+"/contattaci/info/$": if POST => "contact_requested" else "contacts"
+"/contattaci/valutazione/$": if "POST " => "contact_requested" else "contacts
+
+
+# PAPERS_MAPPING = {
+#     "/home/" : "homepage",
+#     "/anncs/sales/": "sales_page, page_1",
+#     "/anncs/sales/?page=<n>": "sales_page, page_n",
+#     "/anncs/sales/<id>": "sales_anncs",
+#     "/anncs/renting/": "renting_page_1",
+#     "/anncs/renting/?page=<n>": "renting_page, page_n",
+#     "/anncs/renting/<id>": "renting_anncs",
+#     "/search/": "search",
+#     "/admin/.../": "control_panel",
+#     "/admin/login/": "login_success or login_fail",
+#     "/contacts/": "contacts",
+#     "/contacts/submit/": "contacts_requested",
+#     "/contacts/tou/": "tou",
+#     "/media/.../": "-",
+# }
+
